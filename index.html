@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickShop Delivery — Partner Dashboard</title>
+  <meta name="description" content="QuickShop Delivery Boy Portal - Deliver orders, view customer info, and manage tasks.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="QS Delivery">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container"></div>
+
+    <!-- ==================== AUTH SCREEN ==================== -->
+    <div id="auth-screen" class="login-screen">
+      <div class="login-card">
+        <div class="login-brand">
+          <div class="brand-icon"><i class="fas fa-truck"></i></div>
+          <h1>Quick<span>Shop</span></h1>
+          <p>Delivery Partner Portal</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+          <button id="tab-register" class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <div id="login-form">
+          <div class="input-group">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="login-email" placeholder="Email Address" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="login-password" placeholder="Password" required>
+          </div>
+          <button class="btn-auth" onclick="partnerLogin()">
+            <i class="fas fa-sign-in-alt"></i> Sign In to Account
+          </button>
+        </div>
+
+        <!-- Register Form -->
+        <div id="register-form" class="hidden">
+          <div class="input-group">
+            <i class="fas fa-user"></i>
+            <input type="text" id="register-name" placeholder="Full Name" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-phone"></i>
+            <input type="tel" id="register-phone" placeholder="Phone Number" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-envelope"></i>
+            <input type="email" id="register-email" placeholder="Email Address" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-motorcycle"></i>
+            <input type="text" id="register-vehicle" placeholder="Vehicle No (e.g. MH 12 AB 1234)" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="register-password" placeholder="Create Password" required>
+          </div>
+          <button class="btn-auth" onclick="partnerRegister()">
+            <i class="fas fa-user-plus"></i> Submit Registration
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PENDING SCREEN ==================== -->
+    <div id="pending-screen" class="pending-screen hidden">
+      <div class="pending-card">
+        <div class="pending-icon-spinner"></div>
+        <h2>Awaiting Approval</h2>
+        <p>Your registration request has been submitted successfully. Your account is currently <b>pending approval</b> by the Store Admin.</p>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Once approved, this page will automatically redirect you to the dashboard. You can also press refresh below.</p>
+        <button class="btn-secondary" onclick="checkCurrentStatus()">
+          <i class="fas fa-sync-alt"></i> Refresh Status
+        </button>
+        <button class="btn-secondary" onclick="logout()" style="margin-left: 8px; background: none; border-color: transparent; color: var(--text-muted);">
+          Back to Login
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== MAIN PANEL ==================== -->
+    <div id="main-panel" class="hidden">
+      
+      <!-- Top Header -->
+      <header class="topbar">
+        <div class="topbar-brand">
+          <i class="fas fa-bolt"></i>
+          <h2>QS Delivery</h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="partner-status-badge" id="partner-status-badge">Online</span>
+          <button class="btn-logout-top" onclick="logout()" title="Log out">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Container -->
+      <main class="container">
+        
+        <!-- === HOME SECTION === -->
+        <section id="section-home">
+          <!-- Stats Panel -->
+          <div class="stats-grid">
+            <div class="stat-card stat-blue">
+              <div class="stat-icon"><i class="fas fa-route"></i></div>
+              <div class="stat-info">
+                <div class="stat-val" id="stat-active-count">0</div>
+                <div class="stat-lbl">Active Tasks</div>
+              </div>
+            </div>
+            <div class="stat-card stat-green">
+              <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+              <div class="stat-info">
+                <div class="stat-val" id="stat-delivered-count">0</div>
+                <div class="stat-lbl">Delivered</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section title -->
+          <div class="section-title">
+            <span>Active Deliveries</span>
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;" id="live-sync-indicator">
+              <i class="fas fa-circle" style="color: var(--success); font-size: 8px; margin-right: 4px;"></i> Live Updates
+            </span>
+          </div>
+
+          <!-- Active Deliveries list -->
+          <div id="active-deliveries-list">
+            <div class="empty-state">
+              <i class="fas fa-route"></i>
+              <p>No active deliveries assigned to you.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- === HISTORY SECTION === -->
+        <section id="section-history" class="hidden">
+          <div class="section-title">
+            <span>Delivery History</span>
+            <span id="history-count" style="font-size: 13px; color: var(--text-muted); font-weight: normal;">0 orders</span>
+          </div>
+
+          <!-- Completed Deliveries list -->
+          <div id="completed-deliveries-list">
+            <div class="empty-state">
+              <i class="fas fa-history"></i>
+              <p>Your completed deliveries will show here.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- === PROFILE SECTION === -->
+        <section id="section-profile" class="hidden">
+          <div class="section-title">Partner Profile</div>
+          
+          <div class="profile-card">
+            <div class="profile-avatar" id="profile-initials">DP</div>
+            <h3 id="profile-name">Delivery Partner</h3>
+            <p id="profile-email-sub">partner@quickshop.com</p>
+            
+            <button class="btn-secondary" onclick="openPasswordModal()">
+              <i class="fas fa-key"></i> Change Password
+            </button>
+
+            <div class="profile-details-list">
+              <div class="profile-detail-item">
+                <span class="profile-detail-label">Mobile Phone</span>
+                <span class="profile-detail-val" id="profile-phone">+91 0000000000</span>
+              </div>
+              <div class="profile-detail-item">
+                <span class="profile-detail-label">Vehicle Number</span>
+                <span class="profile-detail-val" id="profile-vehicle">MH 12 AB 1234</span>
+              </div>
+              <div class="profile-detail-item">
+                <span class="profile-detail-label">Account Status</span>
+                <span class="profile-detail-val" id="profile-status" style="color: var(--success); font-weight: bold; text-transform: uppercase;">Approved</span>
+              </div>
+              <div class="profile-detail-item">
+                <span class="profile-detail-label">Total Completed</span>
+                <span class="profile-detail-val" id="profile-total-delivered">0 orders</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-auth" onclick="logout()" style="background: var(--danger); margin-top: 10px;">
+            <i class="fas fa-sign-out-alt"></i> Sign Out from Portal
+          </button>
+        </section>
+
+      </main>
+
+      <!-- Bottom Nav Bar -->
+      <nav class="bottom-nav">
+        <button id="nav-home" class="nav-tab active" onclick="switchTab('home')">
+          <i class="fas fa-route"></i>
+          <span>Deliveries</span>
+        </button>
+        <button id="nav-history" class="nav-tab" onclick="switchTab('history')">
+          <i class="fas fa-history"></i>
+          <span>History</span>
+        </button>
+        <button id="nav-profile" class="nav-tab" onclick="switchTab('profile')">
+          <i class="fas fa-user"></i>
+          <span>Profile</span>
+        </button>
+      </nav>
+
+    </div>
+
+    <!-- ==================== PASSWORD MODAL ==================== -->
+    <div id="password-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fas fa-key"></i> Change Password</h3>
+          <button class="close-btn" onclick="closePasswordModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="old-pass" placeholder="Current Password" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-key"></i>
+            <input type="password" id="new-pass" placeholder="New Password" required>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-check-circle"></i>
+            <input type="password" id="confirm-new-pass" placeholder="Confirm New Password" required>
+          </div>
+          <button class="btn-auth" style="margin-top: 15px;" onclick="changePasswordSubmit()">
+            <i class="fas fa-save"></i> Save New Password
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-storage-compat.js"></script>
+
+  <!-- Service Worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.warn('SW registration failed:', err);
+        });
+      });
+    }
+  </script>
+
+  <script src="app.js"></script>
+</body>
+</html>
