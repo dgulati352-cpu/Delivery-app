@@ -18,6 +18,8 @@ let activeOrders = [];
 let completedOrders = [];
 let partnerListener = null;
 let ordersListener = null;
+let knownOrderIds = new Set();
+let isOrdersFirstLoad = true;
 
 // ===== DOM CONTENT LOADED =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -112,6 +114,11 @@ function checkCurrentStatus() {
 function startOrdersListener() {
   if (ordersListener) ordersListener(); // stop previous
 
+  // Request notification permission if supported
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+
   ordersListener = db.collection('orders')
     .where('deliveryBoyId', '==', currentPartner.email)
     .onSnapshot(snap => {
@@ -128,6 +135,25 @@ function startOrdersListener() {
       // Active = Processing, Out for Delivery, Pending
       activeOrders = orders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled');
       completedOrders = orders.filter(o => o.status === 'Delivered' || o.status === 'Cancelled');
+
+      // Check for new active assignments to send a notification
+      if (!isOrdersFirstLoad) {
+        let newAssignmentsCount = 0;
+        activeOrders.forEach(o => {
+          if (!knownOrderIds.has(o._id)) {
+            newAssignmentsCount++;
+            showNotification('New Delivery Assigned!', `Order #${o.id || o._id.slice(-6)} is ready for you.`);
+          }
+        });
+        if (newAssignmentsCount > 0) {
+          playNotificationSound();
+        }
+      }
+
+      // Update known IDs
+      knownOrderIds.clear();
+      activeOrders.forEach(o => knownOrderIds.add(o._id));
+      isOrdersFirstLoad = false;
 
       // Update counters
       document.getElementById('stat-active-count').textContent = activeOrders.length;
@@ -589,4 +615,42 @@ function toast(msg, type = 'success') {
     toastEl.style.transition = 'all 0.3s';
     setTimeout(() => toastEl.remove(), 300);
   }, 3000);
+}
+
+// ===== NOTIFICATION HELPERS =====
+function showNotification(title, body) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification(title, {
+      body: body,
+      icon: '/assets/icon-192.png',
+      badge: '/assets/icon-192.png',
+      vibrate: [200, 100, 200]
+    });
+  } else {
+    // Fallback to internal toast if browser notifications are blocked/unsupported
+    toast(title + ' - ' + body, 'info');
+  }
+}
+
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+    osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1); // A6
+    
+    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(e) {
+    console.log("AudioContext not supported or blocked", e);
+  }
 }
